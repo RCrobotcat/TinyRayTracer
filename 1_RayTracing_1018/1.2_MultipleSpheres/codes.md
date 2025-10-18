@@ -1,3 +1,5 @@
+- `main.cpp` => **渲染多个球体**
+```c++
 #include <cmath>
 #include <iostream>
 #include <vector>
@@ -130,3 +132,5 @@ int main()
     render(spheres);
     return 0;
 }
+
+```
