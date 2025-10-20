@@ -1,3 +1,5 @@
+- `main.cpp`
+```c++
 #include <cmath>
 #include <iostream>
 #include <vector>
@@ -97,24 +99,11 @@ Vec3f cast_ray(const Vec3f &orig, const Vec3f &dir, std::vector<Sphere> &spheres
     for (int i = 0; i < lights.size(); i++)
     {
         Vec3f light_direction = (lights[i].position - point).normalize();
-
-        // shadow check
-        float light_distance = (lights[i].position - point).norm();
-        Vec3f shadow_orig = light_direction * N < 0 ? point - N * 1e-3 : point + N * 1e-3;
-        // checking if the point lies in the shadow of the lights[i]
-        Vec3f shadow_pt, shadow_N;
-        Material tmpmaterial;
-        if (scene_intersect(shadow_orig, light_direction, spheres, shadow_pt, shadow_N, tmpmaterial) && (
-                shadow_pt - shadow_orig).norm() < light_distance)
-            continue;
-
-        // Blin-Phong illumination model
         diffuse_light_intensity += lights[i].intensity * std::max(0.f, light_direction * N);
 
         Vec3f view_direction = (orig - point).normalize();
         Vec3f half_vector = (light_direction + view_direction).normalize();
-        specular_light_intensity += lights[i].intensity * powf(std::max(0.f, half_vector * N),
-                                                               material.specular_exponent);
+        specular_light_intensity += lights[i].intensity * powf(std::max(0.f, half_vector * N), material.specular_exponent);
     }
 
     return material.diffuse_color * diffuse_light_intensity * material.albedo[0] + Vec3f(1., 1., 1.) *
@@ -179,3 +168,5 @@ int main()
     render(spheres, lights);
     return 0;
 }
+
+```

@@ -1,3 +1,5 @@
+- `main.cpp`
+```c++
 #include <cmath>
 #include <iostream>
 #include <vector>
@@ -179,3 +181,5 @@ int main()
     render(spheres, lights);
     return 0;
 }
+
+```

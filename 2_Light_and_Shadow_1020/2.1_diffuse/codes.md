@@ -1,3 +1,5 @@
+- `main.cpp`
+```c++
 #include <cmath>
 #include <iostream>
 #include <vector>
@@ -20,24 +22,16 @@ struct Light
 
 struct Material
 {
-    Material(const Vec2f &a, const Vec3f &color, const float &spec) : albedo(a), diffuse_color(color),
-                                                                      specular_exponent(spec)
+    Material(const Vec3f &color) : diffuse_color(color)
     {
     }
 
-    Material() : albedo(1, 0), diffuse_color(), specular_exponent()
+    Material() : diffuse_color()
     {
     }
 
-    Vec2f albedo;
     Vec3f diffuse_color;
-    float specular_exponent;
 };
-
-Vec3f reflect(const Vec3f &I, const Vec3f &N)
-{
-    return I - N * 2.f * (I * N);
-}
 
 struct Sphere
 {
@@ -93,32 +87,13 @@ Vec3f cast_ray(const Vec3f &orig, const Vec3f &dir, std::vector<Sphere> &spheres
     }
 
     float diffuse_light_intensity = 0;
-    float specular_light_intensity = 0;
     for (int i = 0; i < lights.size(); i++)
     {
         Vec3f light_direction = (lights[i].position - point).normalize();
-
-        // shadow check
-        float light_distance = (lights[i].position - point).norm();
-        Vec3f shadow_orig = light_direction * N < 0 ? point - N * 1e-3 : point + N * 1e-3;
-        // checking if the point lies in the shadow of the lights[i]
-        Vec3f shadow_pt, shadow_N;
-        Material tmpmaterial;
-        if (scene_intersect(shadow_orig, light_direction, spheres, shadow_pt, shadow_N, tmpmaterial) && (
-                shadow_pt - shadow_orig).norm() < light_distance)
-            continue;
-
-        // Blin-Phong illumination model
         diffuse_light_intensity += lights[i].intensity * std::max(0.f, light_direction * N);
-
-        Vec3f view_direction = (orig - point).normalize();
-        Vec3f half_vector = (light_direction + view_direction).normalize();
-        specular_light_intensity += lights[i].intensity * powf(std::max(0.f, half_vector * N),
-                                                               material.specular_exponent);
     }
 
-    return material.diffuse_color * diffuse_light_intensity * material.albedo[0] + Vec3f(1., 1., 1.) *
-           specular_light_intensity * material.albedo[1];
+    return material.diffuse_color * diffuse_light_intensity;
 }
 
 void render(std::vector<Sphere> objects, const std::vector<Light> &lights, char const *filename = "output.png")
@@ -162,8 +137,8 @@ void render(std::vector<Sphere> objects, const std::vector<Light> &lights, char 
 
 int main()
 {
-    Material ivory(Vec2f(0.6, 0.3), Vec3f(0.4, 0.4, 0.3), 50.);
-    Material red_rubber(Vec2f(0.9, 0.1), Vec3f(0.3, 0.1, 0.1), 10.);
+    Material ivory(Vec3f(0.4, 0.4, 0.3));
+    Material red_rubber(Vec3f(0.3, 0.1, 0.1));
 
     std::vector<Sphere> spheres;
     spheres.push_back(Sphere(Vec3f(-3, 0, -16), 2, ivory));
@@ -173,9 +148,9 @@ int main()
 
     std::vector<Light> lights;
     lights.push_back(Light(Vec3f(-20, 20, 20), 1.5));
-    lights.push_back(Light(Vec3f(30, 50, -25), 1.8));
-    lights.push_back(Light(Vec3f(30, 20, 30), 1.7));
 
     render(spheres, lights);
     return 0;
 }
+
+```
