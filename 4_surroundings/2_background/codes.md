@@ -1,3 +1,5 @@
+- `main.cpp`
+```c++
 #include <cmath>
 #include <iostream>
 #include <vector>
@@ -121,7 +123,6 @@ bool scene_intersect(const Vec3f &orig, const Vec3f &dir, const std::vector<Sphe
     return std::min(spheres_dist, checkerboard_dist) < 1000;
 }
 
-// equirectangle envmap lookup
 Vec3f envmap_lookup(Vec3f &dir)
 {
     // 将方向向量归一化
@@ -275,3 +276,5 @@ int main()
     render(spheres, lights);
     return 0;
 }
+
+```
