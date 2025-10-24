@@ -8,9 +8,12 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
+#include "model.h"
+
 #define M_PI 3.141592653589793238462643383279502884
 int envmap_width, envmap_height;
 std::vector<Vec3f> envmap;
+Model duck("../duck.obj");
 
 struct Light
 {
@@ -128,15 +131,15 @@ Vec3f envmap_lookup(Vec3f &dir)
     Vec3f d = dir.normalize();
 
     // 球面坐标转换
-    float phi = atan2(d.z, d.x);   // [-π, π]
-    float theta = acos(d.y);       // [0, π]
+    float phi = atan2(d.z, d.x); // [-π, π]
+    float theta = acos(d.y); // [0, π]
 
     // 将球面坐标映射到 [0,1]
     float u = (phi + M_PI) / (2 * M_PI); // 水平方向
-    float v = theta / M_PI;              // 垂直方向
+    float v = theta / M_PI; // 垂直方向
 
     // 映射到贴图像素坐标
-    int x = std::min(envmap_width  - 1, std::max(0, int(u * envmap_width)));
+    int x = std::min(envmap_width - 1, std::max(0, int(u * envmap_width)));
     int y = std::min(envmap_height - 1, std::max(0, int(v * envmap_height)));
 
     return envmap[x + y * envmap_width];
@@ -237,7 +240,8 @@ void render(std::vector<Sphere> objects, const std::vector<Light> &lights, char 
 int main()
 {
     int n = -1;
-    unsigned char *pixmap = stbi_load("../4_surroundings/2_background/envmap.jpg", &envmap_width, &envmap_height, &n, 0);
+    unsigned char *pixmap = stbi_load("../4_surroundings/2_background/envmap.jpg", &envmap_width, &envmap_height, &n,
+                                      0);
     if (!pixmap || 3 != n)
     {
         std::cerr << "Error: can not load the environment map" << std::endl;

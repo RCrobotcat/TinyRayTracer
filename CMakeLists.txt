@@ -9,4 +9,8 @@ add_executable(TinyRayTracer main.cpp
         stb_image_write.h
         stb_image_write.h
         stb_image.h
-        stb_image.h)
+        stb_image.h
+        model.cpp
+        model.h
+        model.cpp
+        model.h)
