@@ -4126,7 +4126,7 @@ static int stbi__zbuild_huffman(stbi__zhuffman *z, const stbi_uc *sizelist, int 
    int i,k=0;
    int code, next_code[16], sizes[17];
 
-   // DEFLATE spec for generating codes
+   // DEFLATE spec for generating codes.md
    memset(sizes, 0, sizeof(sizes));
    memset(z->fast, 0, sizeof(z->fast));
    for (i=0; i < num; ++i)
@@ -4312,7 +4312,7 @@ static int stbi__parse_huffman_block(stbi__zbuf *a)
    for(;;) {
       int z = stbi__zhuffman_decode(a, &a->z_length);
       if (z < 256) {
-         if (z < 0) return stbi__err("bad huffman code","Corrupt PNG"); // error in huffman codes
+         if (z < 0) return stbi__err("bad huffman code","Corrupt PNG"); // error in huffman codes.md
          if (zout >= a->zout_end) {
             if (!stbi__zexpand(a, zout, 1)) return 0;
             zout = a->zout;
@@ -4332,12 +4332,12 @@ static int stbi__parse_huffman_block(stbi__zbuf *a)
             }
             return 1;
          }
-         if (z >= 286) return stbi__err("bad huffman code","Corrupt PNG"); // per DEFLATE, length codes 286 and 287 must not appear in compressed data
+         if (z >= 286) return stbi__err("bad huffman code","Corrupt PNG"); // per DEFLATE, length codes.md 286 and 287 must not appear in compressed data
          z -= 257;
          len = stbi__zlength_base[z];
          if (stbi__zlength_extra[z]) len += stbi__zreceive(a, stbi__zlength_extra[z]);
          z = stbi__zhuffman_decode(a, &a->z_distance);
-         if (z < 0 || z >= 30) return stbi__err("bad huffman code","Corrupt PNG"); // per DEFLATE, distance codes 30 and 31 must not appear in compressed data
+         if (z < 0 || z >= 30) return stbi__err("bad huffman code","Corrupt PNG"); // per DEFLATE, distance codes.md 30 and 31 must not appear in compressed data
          dist = stbi__zdist_base[z];
          if (stbi__zdist_extra[z]) dist += stbi__zreceive(a, stbi__zdist_extra[z]);
          if (zout - a->zout_start < dist) return stbi__err("bad dist","Corrupt PNG");
@@ -6749,7 +6749,7 @@ static stbi_uc *stbi__process_gif_raster(stbi__context *s, stbi__gif *g)
             if (oldcode >= 0) {
                p = &g->codes[avail++];
                if (avail > 8192) {
-                  return stbi__errpuc("too many codes", "Corrupt GIF");
+                  return stbi__errpuc("too many codes.md", "Corrupt GIF");
                }
 
                p->prefix = (stbi__int16) oldcode;

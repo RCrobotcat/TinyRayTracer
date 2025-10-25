@@ -1,3 +1,5 @@
+- `main.cpp`
+```c++
 #include <cmath>
 #include <iostream>
 #include <vector>
@@ -113,30 +115,30 @@ struct Triangle
 
     // Möller–Trumbore algorithm（莫勒–特伦博算法）判断射线是否和三角形相交
     // https://zhuanlan.zhihu.com/p/451582864
-    // bool ray_intersect(const Vec3f &orig, const Vec3f &dir, float &t0, float &u, float &v) const
-    // {
-    //     auto S = orig - v0;
-    //     auto E1 = v1 - v0;
-    //     auto E2 = v2 - v0;
-    //     auto S1 = cross(dir, E2);
-    //     auto S2 = cross(S, E1);
-    //
-    //     // 标量三重积 + 克莱姆法则
-    //     float S1E1 = S1 * E1;
-    //     float t = S2 * E2 / S1E1;
-    //     float b1 = S1 * S / S1E1;
-    //     float b2 = S2 * dir / S1E1;
-    //
-    //     if (t >= 0.f && b1 >= 0.f && b2 >= 0.f && (1 - b1 - b2) >= 0.f)
-    //     {
-    //         t0 = t;
-    //         u = b1;
-    //         v = b2;
-    //         return true;
-    //     }
-    //
-    //     return false;
-    // }
+    bool ray_intersect(const Vec3f &orig, const Vec3f &dir, float &t0, float &u, float &v) const
+    {
+        auto S = orig - v0;
+        auto E1 = v1 - v0;
+        auto E2 = v2 - v0;
+        auto S1 = cross(dir, E2);
+        auto S2 = cross(S, E1);
+
+        // 标量三重积 + 克莱姆法则
+        float S1E1 = S1 * E1;
+        float t = S2 * E2 / S1E1;
+        float b1 = S1 * S / S1E1;
+        float b2 = S2 * dir / S1E1;
+
+        if (t >= 0.f && b1 >= 0.f && b2 >= 0.f && (1 - b1 - b2) >= 0.f)
+        {
+            t0 = t;
+            u = b1;
+            v = b2;
+            return true;
+        }
+
+        return false;
+    }
 };
 
 bool scene_intersect(const Vec3f &orig, const Vec3f &dir, const std::vector<Sphere> &spheres,
@@ -178,7 +180,7 @@ bool scene_intersect(const Vec3f &orig, const Vec3f &dir, const std::vector<Sphe
     for (size_t i = 0; i < models.size(); i++)
     {
         float dist_i, u, v;
-        if (duck.ray_triangle_intersect(i, orig, dir, dist_i) && dist_i < spheres_dist && dist_i < checkerboard_dist
+        if (models[i].ray_intersect(orig, dir, dist_i, u, v) && dist_i < spheres_dist && dist_i < checkerboard_dist
             && dist_i < models_dist)
         {
             models_dist = dist_i;
@@ -238,7 +240,12 @@ Vec3f cast_ray(const Vec3f &orig, Vec3f &dir, std::vector<Sphere> &spheres, std:
     Vec3f refract_orig = refract_dir * N < 0 ? point - N * 1e-3 : point + N * 1e-3;
     // 如果折射射线没击中任何物体，则直接采样环境贴图
     Vec3f refract_color;
-    refract_color = cast_ray(refract_orig, refract_dir, spheres, models, lights, depth + 1);
+    Vec3f refract_hit, refract_N;
+    Material refract_mat;
+    if (!scene_intersect(refract_orig, refract_dir, spheres, models, refract_hit, refract_N, refract_mat))
+        refract_color = envmap_lookup(dir);
+    else
+        refract_color = cast_ray(refract_orig, refract_dir, spheres, models, lights, depth + 1);
 
     float diffuse_light_intensity = 0;
     float specular_light_intensity = 0;
@@ -361,3 +368,5 @@ int main()
     render(spheres, duck_triangles, lights);
     return 0;
 }
+
+```
