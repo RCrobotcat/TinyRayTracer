@@ -4,8 +4,11 @@
 #include "geometry.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
+
 #include "stb_image_write.h"
+
 #define STB_IMAGE_IMPLEMENTATION
+
 #include "stb_image.h"
 
 #include "model.h"
@@ -13,27 +16,24 @@
 #define M_PI 3.141592653589793238462643383279502884
 int envmap_width, envmap_height;
 std::vector<Vec3f> envmap;
+
 Model duck("../duck.obj");
 
-struct Light
-{
-    Light(const Vec3f &p, const float &i) : position(p), intensity(i)
-    {
+struct Light {
+    Light(const Vec3f &p, const float &i) : position(p), intensity(i) {
     }
 
     Vec3f position;
     float intensity;
 };
 
-struct Material
-{
+struct Material {
     Material(const float &r, const Vec4f &a, const Vec3f &color, const float &spec) : refractive_index(r), albedo(a),
-        diffuse_color(color), specular_exponent(spec)
-    {
+                                                                                      diffuse_color(color),
+                                                                                      specular_exponent(spec) {
     }
 
-    Material() : refractive_index(1), albedo(1, 0, 0, 0), diffuse_color(), specular_exponent()
-    {
+    Material() : refractive_index(1), albedo(1, 0, 0, 0), diffuse_color(), specular_exponent() {
     }
 
     float refractive_index;
@@ -42,19 +42,16 @@ struct Material
     float specular_exponent;
 };
 
-Vec3f reflect(const Vec3f &I, const Vec3f &N)
-{
+Vec3f reflect(const Vec3f &I, const Vec3f &N) {
     return I - N * 2.f * (I * N);
 }
 
-Vec3f refract(const Vec3f &I, const Vec3f &N, const float &refractive_index)
-{
+Vec3f refract(const Vec3f &I, const Vec3f &N, const float &refractive_index) {
     // Snell's law
     float cosi = -std::max(-1.f, std::min(1.f, I * N));
     float etai = 1, etat = refractive_index;
     Vec3f n = N;
-    if (cosi < 0)
-    {
+    if (cosi < 0) {
         // if the ray is inside the object, swap the indices and invert the normal to get the correct result
         cosi = -cosi;
         std::swap(etai, etat);
@@ -65,18 +62,15 @@ Vec3f refract(const Vec3f &I, const Vec3f &N, const float &refractive_index)
     return k < 0 ? Vec3f(0, 0, 0) : I * eta + n * (eta * cosi - sqrtf(k));
 }
 
-struct Sphere
-{
+struct Sphere {
     Vec3f center;
     float radius;
     Material material;
 
-    Sphere(const Vec3f &c, const float &r, const Material &m) : center(c), radius(r), material(m)
-    {
+    Sphere(const Vec3f &c, const float &r, const Material &m) : center(c), radius(r), material(m) {
     }
 
-    bool ray_intersect(const Vec3f &orig, const Vec3f &dir, float &t0) const
-    {
+    bool ray_intersect(const Vec3f &orig, const Vec3f &dir, float &t0) const {
         Vec3f L = center - orig;
         float tca = L * dir;
         float d2 = L * L - tca * tca;
@@ -90,12 +84,46 @@ struct Sphere
     }
 };
 
+struct Triangle {
+    Vec3f v0, v1, v2;
+
+    Triangle(const Vec3f &a, const Vec3f &b, const Vec3f &c) : v0(a), v1(b), v2(c) {
+    }
+
+    Vec3f operator[](const int i) const {
+        return i == 0 ? v0 : (i == 1 ? v1 : v2);
+    }
+
+    // Möller–Trumbore algorithm（莫勒–特伦博算法）判断射线是否和三角形相交
+    // https://zhuanlan.zhihu.com/p/451582864
+    bool ray_intersect(const Vec3f &orig, const Vec3f &dir, float &t0, float &u, float &v) const {
+        auto S = orig - v0;
+        auto E1 = v1 - v0;
+        auto E2 = v2 - v0;
+        auto S1 = cross(dir, E2);
+        auto S2 = cross(S, E1);
+
+        // 标量三重积 + 克莱姆法则
+        float S1E1 = S1 * E1;
+        float t = S2 * E2 / S1E1;
+        float b1 = S1 * S / S1E1;
+        float b2 = S2 * dir / S1E1;
+
+        if (t >= 0.f && b1 >= 0.f && b2 >= 0.f && (1 - b1 - b2) >= 0.f) {
+            t0 = t;
+            u = b1;
+            v = b2;
+            return true;
+        }
+
+        return false;
+    }
+};
+
 bool scene_intersect(const Vec3f &orig, const Vec3f &dir, const std::vector<Sphere> &spheres, Vec3f &hit, Vec3f &N,
-                     Material &material)
-{
+                     Material &material) {
     float spheres_dist = std::numeric_limits<float>::max();
-    for (size_t i = 0; i < spheres.size(); i++)
-    {
+    for (size_t i = 0; i < spheres.size(); i++) {
         float dist_i;
         if (spheres[i].ray_intersect(orig, dir, dist_i) && dist_i < spheres_dist) // 找到更近的交点 相当于深度测试
         {
@@ -108,12 +136,10 @@ bool scene_intersect(const Vec3f &orig, const Vec3f &dir, const std::vector<Sphe
 
     // chess board plane
     float checkerboard_dist = std::numeric_limits<float>::max();
-    if (fabs(dir.y) > 1e-3)
-    {
+    if (fabs(dir.y) > 1e-3) {
         float d = -(orig.y + 4) / dir.y; // the checkerboard plane has equation y = -4
         Vec3f pt = orig + dir * d;
-        if (d > 0 && fabs(pt.x) < 10 && pt.z < -10 && pt.z > -30 && d < spheres_dist)
-        {
+        if (d > 0 && fabs(pt.x) < 10 && pt.z < -10 && pt.z > -30 && d < spheres_dist) {
             checkerboard_dist = d;
             hit = pt;
             N = Vec3f(0, 1, 0);
@@ -125,8 +151,7 @@ bool scene_intersect(const Vec3f &orig, const Vec3f &dir, const std::vector<Sphe
 }
 
 // equirectangle envmap lookup
-Vec3f envmap_lookup(Vec3f &dir)
-{
+Vec3f envmap_lookup(Vec3f &dir) {
     // 将方向向量归一化
     Vec3f d = dir.normalize();
 
@@ -146,13 +171,11 @@ Vec3f envmap_lookup(Vec3f &dir)
 }
 
 Vec3f cast_ray(const Vec3f &orig, Vec3f &dir, std::vector<Sphere> &spheres, const std::vector<Light> &lights,
-               size_t depth = 0)
-{
+               size_t depth = 0) {
     Vec3f point, N;
     Material material;
 
-    if (depth > 4 || !scene_intersect(orig, dir, spheres, point, N, material))
-    {
+    if (depth > 4 || !scene_intersect(orig, dir, spheres, point, N, material)) {
         // return Vec3f(0.2, 0.7, 0.8); // background color
         return envmap_lookup(dir);
     }
@@ -170,8 +193,7 @@ Vec3f cast_ray(const Vec3f &orig, Vec3f &dir, std::vector<Sphere> &spheres, cons
 
     float diffuse_light_intensity = 0;
     float specular_light_intensity = 0;
-    for (int i = 0; i < lights.size(); i++)
-    {
+    for (int i = 0; i < lights.size(); i++) {
         Vec3f light_direction = (lights[i].position - point).normalize();
 
         // shadow check
@@ -181,7 +203,9 @@ Vec3f cast_ray(const Vec3f &orig, Vec3f &dir, std::vector<Sphere> &spheres, cons
         Vec3f shadow_pt, shadow_N;
         Material tmpmaterial;
         if (scene_intersect(shadow_orig, light_direction, spheres, shadow_pt, shadow_N, tmpmaterial) && (
-                shadow_pt - shadow_orig).norm() < light_distance)
+                                                                                                                shadow_pt -
+                                                                                                                shadow_orig).norm() <
+                                                                                                        light_distance)
             continue;
 
         // Blin-Phong illumination model
@@ -198,18 +222,15 @@ Vec3f cast_ray(const Vec3f &orig, Vec3f &dir, std::vector<Sphere> &spheres, cons
            + reflect_color * material.albedo[2] + refract_color * material.albedo[3];
 }
 
-void render(std::vector<Sphere> objects, const std::vector<Light> &lights, char const *filename = "output.png")
-{
+void render(std::vector<Sphere> objects, const std::vector<Light> &lights, char const *filename = "output.png") {
     const int width = 1024;
     const int height = 768;
     const int fov = M_PI / 2.;
     std::vector<Vec3f> framebuffer(width * height); // Frame buffer to hold pixel colors
 
 #pragma omp parallel for
-    for (size_t j = 0; j < height; j++)
-    {
-        for (size_t i = 0; i < width; i++)
-        {
+    for (size_t j = 0; j < height; j++) {
+        for (size_t i = 0; i < width; i++) {
             float x = (2 * (i + 0.5) / (float) width - 1) * tan(fov / 2.) * width / (float) height;
             float y = -(2 * (j + 0.5) / (float) height - 1) * tan(fov / 2.);
             Vec3f dir = Vec3f(x, y, -1).normalize();
@@ -219,10 +240,8 @@ void render(std::vector<Sphere> objects, const std::vector<Light> &lights, char 
 
     // 转换为 8-bit RGB 图像数据
     std::vector<unsigned char> image(3 * width * height);
-    for (int j = 0; j < height; j++)
-    {
-        for (int i = 0; i < width; i++)
-        {
+    for (int j = 0; j < height; j++) {
+        for (int i = 0; i < width; i++) {
             Vec3f &c = framebuffer[i + j * width];
             image[3 * (i + j * width) + 0] = (unsigned char) (255 * std::max(0.f, std::min(1.f, c.x)));
             image[3 * (i + j * width) + 1] = (unsigned char) (255 * std::max(0.f, std::min(1.f, c.y)));
@@ -237,22 +256,18 @@ void render(std::vector<Sphere> objects, const std::vector<Light> &lights, char 
         std::cout << "failed to write image!" << std::endl;
 }
 
-int main()
-{
+int main() {
     int n = -1;
     unsigned char *pixmap = stbi_load("../4_surroundings/2_background/envmap.jpg", &envmap_width, &envmap_height, &n,
                                       0);
-    if (!pixmap || 3 != n)
-    {
+    if (!pixmap || 3 != n) {
         std::cerr << "Error: can not load the environment map" << std::endl;
         return -1;
     }
 
     envmap = std::vector<Vec3f>(envmap_width * envmap_height);
-    for (int j = envmap_height - 1; j >= 0; j--)
-    {
-        for (int i = 0; i < envmap_width; i++)
-        {
+    for (int j = envmap_height - 1; j >= 0; j--) {
+        for (int i = 0; i < envmap_width; i++) {
             envmap[i + j * envmap_width] = Vec3f(pixmap[(i + j * envmap_width) * 3 + 0],
                                                  pixmap[(i + j * envmap_width) * 3 + 1],
                                                  pixmap[(i + j * envmap_width) * 3 + 2]) * (1 / 255.);
